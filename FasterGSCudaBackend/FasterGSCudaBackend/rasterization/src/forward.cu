@@ -36,15 +36,15 @@ std::tuple<int, int, int> faster_gs::rasterization::forward(
     const float far_plane,
     const bool proper_antialiasing)
 {
-    const dim3 grid(div_round_up(width, config::tile_width), div_round_up(height, config::tile_height), 1);
-    const dim3 block(config::tile_width, config::tile_height, 1);
+    const dim3 grid(div_round_up(width, config::tile_width), div_round_up(height, config::tile_height), 1);//计算图像需要划分多少个 Tile
+    const dim3 block(config::tile_width, config::tile_height, 1);//block布局
     const int n_tiles = grid.x * grid.y;
-    const int end_bit = extract_end_bit(n_tiles - 1);
+    const int end_bit = extract_end_bit(n_tiles - 1);//计算表示最大 Tile ID 需要多少位
 
-    char* tile_buffers_blob = resize_tile_buffers(required<TileBuffers>(n_tiles));
-    TileBuffers tile_buffers = TileBuffers::from_blob(tile_buffers_blob, n_tiles);
+    char* tile_buffers_blob = resize_tile_buffers(required<TileBuffers>(n_tiles));//申请 Tile 相关缓冲区
+    TileBuffers tile_buffers = TileBuffers::from_blob(tile_buffers_blob, n_tiles);//把刚才申请的内存划分成不同用途的数组
 
-    static cudaStream_t memset_stream = 0;
+    static cudaStream_t memset_stream = 0;//47-56创建并使用 CUDA Stream，清零 instance_ranges
     if constexpr (!config::debug) {
         static bool memset_stream_initialized = false;
         if (!memset_stream_initialized) {
@@ -55,10 +55,10 @@ std::tuple<int, int, int> faster_gs::rasterization::forward(
     }
     else cudaMemset(tile_buffers.instance_ranges, 0, sizeof(uint2) * n_tiles);
 
-    char* primitive_buffers_blob = resize_primitive_buffers(required<PrimitiveBuffers>(n_primitives));
+    char* primitive_buffers_blob = resize_primitive_buffers(required<PrimitiveBuffers>(n_primitives));//申请 Gaussian 相关缓冲区
     PrimitiveBuffers primitive_buffers = PrimitiveBuffers::from_blob(primitive_buffers_blob, n_primitives);
 
-    cudaMemset(primitive_buffers.n_visible_primitives, 0, sizeof(uint));
+    cudaMemset(primitive_buffers.n_visible_primitives, 0, sizeof(uint));//两个计数器清零：可见 Gaussian 的数量、Gaussian-Tile 配对总数
     cudaMemset(primitive_buffers.n_instances, 0, sizeof(uint));
 
     kernels::forward::preprocess_cu<<<div_round_up(n_primitives, config::block_size_preprocess), config::block_size_preprocess>>>(
@@ -70,7 +70,7 @@ std::tuple<int, int, int> faster_gs::rasterization::forward(
         sh_coefficients_rest,
         w2c,
         cam_position,
-        primitive_buffers.depth_keys.Current(),
+        primitive_buffers.depth_keys.Current(),//current为cub双缓冲
         primitive_buffers.primitive_indices.Current(),
         primitive_buffers.n_touched_tiles,
         primitive_buffers.screen_bounds,
