@@ -12,7 +12,7 @@
 
 std::tuple<torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, torch::Tensor, int, int, int>
 faster_gs::rasterization::forward_wrapper(
-    const torch::Tensor& means,
+    const torch::Tensor& means,//接收python传来的参数（引用）
     const torch::Tensor& scales,
     const torch::Tensor& rotations,
     const torch::Tensor& opacities,
@@ -32,7 +32,7 @@ faster_gs::rasterization::forward_wrapper(
     const float far_plane,
     const bool proper_antialiasing)
 {
-    // all optimizable tensors must be passed as contiguous CUDA float tensors
+    // 检查 Tensor 是否符合要求：位于 CUDA GPU 上。数据类型是 float。内存连续。
     CHECK_INPUT(config::debug, means, "means");
     CHECK_INPUT(config::debug, scales, "scales");
     CHECK_INPUT(config::debug, rotations, "rotations");
@@ -49,12 +49,12 @@ faster_gs::rasterization::forward_wrapper(
     torch::Tensor tile_buffers = torch::empty({0}, byte_options);
     torch::Tensor instance_buffers = torch::empty({0}, byte_options);
     torch::Tensor bucket_buffers = torch::empty({0}, byte_options);
-    const std::function<char*(size_t)> resize_primitive_buffers = resize_function_wrapper(primitive_buffers);
+    const std::function<char*(size_t)> resize_primitive_buffers = resize_function_wrapper(primitive_buffers);//创建一个函数对象，这个函数对象以后可以根据需要调整 `primitive_buffers` 的大小，并返回它的 GPU 内存地址。
     const std::function<char*(size_t)> resize_tile_buffers = resize_function_wrapper(tile_buffers);
     const std::function<char*(size_t)> resize_instance_buffers = resize_function_wrapper(instance_buffers);
     const std::function<char*(size_t)> resize_bucket_buffers = resize_function_wrapper(bucket_buffers);
 
-    auto [n_instances, n_buckets, instance_primitive_indices_selector] = forward(
+    auto [n_instances, n_buckets, instance_primitive_indices_selector] = forward(//调用函数 [返回值]
         resize_primitive_buffers,
         resize_tile_buffers,
         resize_instance_buffers,
