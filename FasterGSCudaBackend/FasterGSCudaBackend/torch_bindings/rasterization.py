@@ -51,18 +51,18 @@ class _Rasterize(torch.autograd.Function):
         densification_info: torch.Tensor,
         rasterizer_settings: RasterizerSettings,
     ) -> torch.Tensor:
-        (
+        (//接收c++返回的结果
             image,
             primitive_buffers, tile_buffers, instance_buffers, bucket_buffers,
             n_instances, n_buckets, instance_primitive_indices_selector
-        ) = _C.forward(
-            means,
+        ) = _C.forward(  //把数据交给C++ 函数。它最终会调用：forward_wrapper(...)
+            means,      //45-52传进来的参数
             scales,
             rotations,
             opacities,
             sh_coefficients_0,
             sh_coefficients_rest,
-            *rasterizer_settings.as_tuple(),
+            *rasterizer_settings.as_tuple(),//元组拆开，作为多个独立参数传递
         )
         ctx.rasterizer_settings = rasterizer_settings
         ctx.buffer_state = (n_instances, n_buckets, instance_primitive_indices_selector)
